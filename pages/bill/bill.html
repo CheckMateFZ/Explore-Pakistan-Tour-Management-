@@ -1,0 +1,196 @@
+<!DOCTYPE html>
+<html lang="en">
+
+<head>
+  <meta charset="utf-8">
+  <title>Hotel Billing Invoice</title>
+  <style>
+    body {
+      font-family: 'Arial', sans-serif;
+      margin: 0;
+      padding: 0;
+      background-color: #f4f4f4;
+      color: #333;
+    }
+
+    header {
+      background-color: #2c3e50;
+      color: #ecf0f1;
+      text-align: center;
+      padding: 20px 0;
+      margin-bottom: 20px;
+    }
+
+    #logo img {
+      width: 100px;
+      height: auto;
+    }
+
+    #company {
+      float: right;
+      text-align: right;
+      color: white; /* Set the text color for project details */
+      margin-top: -60px;
+    }
+
+    #project {
+      float: left;
+      color: white; /* Set the text color for project details */
+      margin-top: -60px;
+      text-align: left; /* Adjust the top margin */
+    }
+
+    main {
+      margin: 0 auto;
+      max-width: 800px;
+    }
+
+    table {
+      width: 100%;
+      border-collapse: collapse;
+      margin-bottom: 20px;
+    }
+
+    th, td {
+      border: 1px solid #ddd;
+      padding: 12px;
+      text-align: left;
+    }
+
+    th {
+      background-color: #2c3e50;
+      color: #ecf0f1;
+    }
+
+    #notices {
+      margin-top: 20px;
+      font-size: 14px;
+      color: #333; /* Set the text color for notices */
+    }
+
+    footer {
+      text-align: center;
+      padding: 10px 0;
+      background-color: #2c3e50;
+      color: #ecf0f1;
+    }
+  </style>
+  <script>
+    document.addEventListener('DOMContentLoaded', function () {
+      const storedData = sessionStorage.getItem("loggedInUser");
+      const userData = storedData ? JSON.parse(storedData) : {};
+
+      fetch('http://localhost:3000/get-user-bookings', {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json',
+        },
+        body: JSON.stringify({
+          userId: userData.userId,
+        }),
+      })
+      .then(response => response.json())
+      .then(backendResponse => {
+        const maxBooking = backendResponse.reduce((max, booking) => {
+          return booking.BookingID > max.BookingID ? booking : max;
+        }, backendResponse[0]);
+
+        document.getElementById('clientName').innerText = maxBooking?.Booker_Name || 'John Doe';
+        document.getElementById('clientEmail').innerText = maxBooking?.Booker_Email || 'john@example.com';
+        document.getElementById('invoiceDate').innerText = new Date(maxBooking?.Booking_Date || 'August 17, 2015').toLocaleDateString();
+        document.getElementById('hotelName').innerText = maxBooking?.Hotel_name || 'Hotel Name';
+        document.getElementById('hotelCost').innerText = `$${maxBooking?.HotelCost.toFixed(2) || '0.00'}`;
+
+        // Calculate total bill based on membership type
+        let totalBill = parseFloat(maxBooking?.HotelCost) || 0.0;
+        let discountPercentage = 0;
+
+        switch (userData.membershipType) {
+          case 'sapphire':
+            discountPercentage = 5;
+            totalBill *= 0.95; // 5% off for Sapphire
+            break;
+          case 'nitro':
+            discountPercentage = 10;
+            totalBill *= 0.9; // 10% off for Nitro
+            break;
+          case 'elite':
+            discountPercentage = 20;
+            totalBill *= 0.8; // 20% off for Elite
+            break;
+          // Add more cases if needed for other membership types
+          default:
+            // No discount for other membership types
+            break;
+        }
+
+        // Update the total bill in the HTML
+        document.getElementById('totalBill').innerText = `$${totalBill.toFixed(2)}`;
+
+        // Display discount information
+        document.getElementById('discountInfo').innerText = `Discount (${userData.membershipType}): ${discountPercentage}%`;
+        document.getElementById('discountedAmount').innerText = `Discounted Amount: $${(maxBooking?.HotelCost - totalBill).toFixed(2)}`;
+
+      })
+      .catch(error => {
+        console.error('Error fetching data:', error);
+      });
+    });
+  </script>
+</head>
+
+<body>
+  <header class="clearfix">
+    <div id="logo">
+      <img src="logo.png" alt="Company Logo">
+    </div>
+    <h1>EEP INVOICES</h1>
+    <div id="company">
+      <div>EEP PLANNERS</div>
+      <div>KARACHI</div>
+      <div>(345) 519-0450</div>
+      <div>eep@gmail.com</div>
+    </div>
+    <div id="project">
+      <div><span style="color: white;"></span></div>
+      <div><span style="color: white;"></span> <span id="clientName">John Doe</span></div>
+      <div><span style="color: white;"></span> <a id="clientEmail">john@example.com</a></div>
+      <div><span style="color: white;"></span> <span id="invoiceDate">August 17, 2015</span></div>
+    </div>
+  </header>
+  <main>
+    <table>
+      <thead>
+        <tr>
+          <th class="service">Hotel Name</th>
+          <th class="desc">DESCRIPTION</th>
+          <th>PRICE</th>
+        </tr>
+      </thead>
+      <tbody>
+        <tr>
+          <td class="service" id="hotelName">Hotel Name</td>
+          <td class="desc">BILLING</td>
+          <td class="unit" id="hotelCost">$0.00</td>
+        </tr>
+      </tbody>
+    </table>
+
+    <!-- Add an element to display the total bill -->
+    <div>Total Bill: <span id="totalBill">$0.00</span></div>
+
+    <!-- Add elements to display discount information -->
+    <div id="discountInfo"></div>
+    <div id="discountedAmount"></div>
+
+    <div id="notices">
+      <div>NOTICE:</div>
+      <div class="notice">A finance charge of 1.5% will be made on unpaid balances after 30 days.</div>
+    </div>
+  </main>
+  <footer>
+    Invoice was created on a computer and is valid without the signature and seal.
+  </footer>
+</body>
+
+</html>
